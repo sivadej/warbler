@@ -18,7 +18,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
 toolbar = DebugToolbarExtension(app)
 
@@ -29,7 +29,7 @@ connect_db(app)
 # User signup/login/logout
 
 
-@app.before_request
+@app.before_request #before_request() registers a function to run before each request. Loads logged in user from session.
 def add_user_to_g():
     """If we're logged in, add curr user to Flask global."""
 
@@ -231,7 +231,8 @@ def profile():
             flash('profile updated')
             return redirect(f'/users/{g.user.id}')
         else:
-            return('password mismatch CHANGE THIS CODE')
+            flash('password mismatch. profile edit failed.', 'danger')
+            return redirect('/users/profile')
     return render_template('users/edit.html', form=form)
 
 
@@ -313,14 +314,14 @@ def homepage():
     """
 
     if g.user:
+        following_ids = [user.id for user in g.user.following] #get list of ids only
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_(following_ids)) #filter for followed users. Same as SQL: ... WHERE user_id IN (#,#,#,#,...) ORDER BY ...
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
-
         return render_template('home.html', messages=messages)
-
     else:
         return render_template('home-anon.html')
 
