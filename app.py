@@ -5,7 +5,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
 from forms import UserAddForm, LoginForm, MessageForm, EditProfileForm
-from models import db, connect_db, User, Message
+from models import db, connect_db, User, Message, Likes
 
 CURR_USER_KEY = "curr_user"
 
@@ -250,6 +250,25 @@ def delete_user():
     db.session.commit()
 
     return redirect("/signup")
+
+@app.route('/users/toggle_like/<int:msg_id>', methods=['POST'])
+def toggle_like(msg_id):
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+    
+    # query for user_id and msg_id, handle add/remove like from db
+    like = Likes.query.filter_by(user_id=g.user.id, message_id=msg_id).one_or_none()
+    if like is None:
+        new_like = Likes(user_id=g.user.id, message_id=msg_id)
+        db.session.add(new_like)
+        db.session.commit()
+        return redirect('/')
+    else:
+        db.session.delete(like)
+        db.session.commit()
+        return redirect('/')
 
 
 ##############################################################################
